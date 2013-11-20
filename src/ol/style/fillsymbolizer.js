@@ -15,6 +15,7 @@ goog.require('ol.style.Symbolizer');
  * @constructor
  * @extends {ol.style.Symbolizer}
  * @param {ol.style.FillOptions=} opt_options Polygon options.
+ * @todo stability experimental
  */
 ol.style.Fill = function(opt_options) {
   goog.base(this);
@@ -37,6 +38,15 @@ ol.style.Fill = function(opt_options) {
       new ol.expr.Literal(ol.style.FillDefaults.opacity) :
       (options.opacity instanceof ol.expr.Expression) ?
           options.opacity : new ol.expr.Literal(options.opacity);
+
+  /**
+   * @type {ol.expr.Expression}
+   * @private
+   */
+  this.zIndex_ = !goog.isDefAndNotNull(options.zIndex) ?
+      new ol.expr.Literal(ol.style.FillDefaults.zIndex) :
+      (options.zIndex instanceof ol.expr.Expression) ?
+          options.zIndex : new ol.expr.Literal(options.zIndex);
 
 };
 goog.inherits(ol.style.Fill, ol.style.Symbolizer);
@@ -64,13 +74,16 @@ ol.style.Fill.prototype.createLiteral = function(featureOrType) {
     goog.asserts.assertString(
         color, 'color must be a string');
 
-    var opacity = ol.expr.evaluateFeature(this.opacity_, feature);
-    goog.asserts.assertNumber(
-        opacity, 'color must be a number');
+    var opacity = Number(ol.expr.evaluateFeature(this.opacity_, feature));
+    goog.asserts.assert(!isNaN(opacity), 'opacity must be a number');
+
+    var zIndex = Number(ol.expr.evaluateFeature(this.zIndex_, feature));
+    goog.asserts.assert(!isNaN(zIndex), 'zIndex must be a number');
 
     literal = new ol.style.PolygonLiteral({
       fillColor: color,
-      fillOpacity: opacity
+      fillOpacity: opacity,
+      zIndex: zIndex
     });
   }
 
@@ -97,6 +110,15 @@ ol.style.Fill.prototype.getOpacity = function() {
 
 
 /**
+ * Get the fill zIndex.
+ * @return {ol.expr.Expression} Fill zIndex.
+ */
+ol.style.Fill.prototype.getZIndex = function() {
+  return this.zIndex_;
+};
+
+
+/**
  * Set the fill color.
  * @param {ol.expr.Expression} color Fill color.
  */
@@ -117,10 +139,22 @@ ol.style.Fill.prototype.setOpacity = function(opacity) {
 
 
 /**
- * @typedef {{fillColor: (string),
- *            fillOpacity: (number)}}
+ * Set the fill zIndex.
+ * @param {ol.expr.Expression} zIndex Fill zIndex.
+ */
+ol.style.Fill.prototype.setZIndex = function(zIndex) {
+  goog.asserts.assertInstanceof(zIndex, ol.expr.Expression);
+  this.zIndex_ = zIndex;
+};
+
+
+/**
+ * @typedef {{fillColor: string,
+ *            fillOpacity: number,
+ *            zIndex: number}}
  */
 ol.style.FillDefaults = {
   color: '#ffffff',
-  opacity: 0.4
+  opacity: 0.4,
+  zIndex: 0
 };

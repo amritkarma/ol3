@@ -3,7 +3,7 @@ goog.provide('ol.Kinetic');
 
 goog.require('ol.Coordinate');
 goog.require('ol.PreRenderFunction');
-goog.require('ol.animation.pan');
+goog.require('ol.animation');
 
 
 
@@ -13,6 +13,7 @@ goog.require('ol.animation.pan');
  * @param {number} minVelocity Minimum velocity (pixels/millisecond).
  * @param {number} delay Delay to consider to calculate the kinetic
  *     initial values (milliseconds).
+ * @todo stability experimental
  */
 ol.Kinetic = function(decay, minVelocity, delay) {
 

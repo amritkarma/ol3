@@ -15,8 +15,10 @@ goog.require('ol.style.Point');
  * @constructor
  * @extends {ol.style.Point}
  * @param {ol.style.IconOptions} options Icon options.
+ * @todo stability experimental
  */
 ol.style.Icon = function(options) {
+  goog.base(this);
 
   goog.asserts.assert(options.url, 'url must be set');
 
@@ -63,7 +65,35 @@ ol.style.Icon = function(options) {
       (options.rotation instanceof ol.expr.Expression) ?
           options.rotation : new ol.expr.Literal(options.rotation);
 
+  /**
+   * @type {ol.expr.Expression}
+   * @private
+   */
+  this.xOffset_ = !goog.isDef(options.xOffset) ?
+      new ol.expr.Literal(ol.style.IconDefaults.xOffset) :
+      (options.xOffset instanceof ol.expr.Expression) ?
+          options.xOffset : new ol.expr.Literal(options.xOffset);
+
+  /**
+   * @type {ol.expr.Expression}
+   * @private
+   */
+  this.yOffset_ = !goog.isDef(options.yOffset) ?
+      new ol.expr.Literal(ol.style.IconDefaults.yOffset) :
+      (options.yOffset instanceof ol.expr.Expression) ?
+          options.yOffset : new ol.expr.Literal(options.yOffset);
+
+  /**
+   * @type {ol.expr.Expression}
+   * @private
+   */
+  this.zIndex_ = !goog.isDefAndNotNull(options.zIndex) ?
+      new ol.expr.Literal(ol.style.IconDefaults.zIndex) :
+      (options.zIndex instanceof ol.expr.Expression) ?
+          options.zIndex : new ol.expr.Literal(options.zIndex);
+
 };
+goog.inherits(ol.style.Icon, ol.style.Point);
 
 
 /**
@@ -90,28 +120,40 @@ ol.style.Icon.prototype.createLiteral = function(featureOrType) {
 
     var width;
     if (!goog.isNull(this.width_)) {
-      width = ol.expr.evaluateFeature(this.width_, feature);
-      goog.asserts.assertNumber(width, 'width must be a number');
+      width = Number(ol.expr.evaluateFeature(this.width_, feature));
+      goog.asserts.assert(!isNaN(width), 'width must be a number');
     }
 
     var height;
     if (!goog.isNull(this.height_)) {
-      height = ol.expr.evaluateFeature(this.height_, feature);
+      height = Number(ol.expr.evaluateFeature(this.height_, feature));
       goog.asserts.assertNumber(height, 'height must be a number');
     }
 
-    var opacity = ol.expr.evaluateFeature(this.opacity_, feature);
-    goog.asserts.assertNumber(opacity, 'opacity must be a number');
+    var opacity = Number(ol.expr.evaluateFeature(this.opacity_, feature));
+    goog.asserts.assert(!isNaN(opacity), 'opacity must be a number');
 
-    var rotation = ol.expr.evaluateFeature(this.rotation_, feature);
-    goog.asserts.assertNumber(rotation, 'rotation must be a number');
+    var rotation = Number(ol.expr.evaluateFeature(this.rotation_, feature));
+    goog.asserts.assert(!isNaN(rotation), 'rotation must be a number');
+
+    var xOffset = Number(ol.expr.evaluateFeature(this.xOffset_, feature));
+    goog.asserts.assert(!isNaN(xOffset), 'xOffset must be a number');
+
+    var yOffset = Number(ol.expr.evaluateFeature(this.yOffset_, feature));
+    goog.asserts.assert(!isNaN(yOffset), 'yOffset must be a number');
+
+    var zIndex = Number(ol.expr.evaluateFeature(this.zIndex_, feature));
+    goog.asserts.assert(!isNaN(zIndex), 'zIndex must be a number');
 
     literal = new ol.style.IconLiteral({
       url: url,
       width: width,
       height: height,
       opacity: opacity,
-      rotation: rotation
+      rotation: rotation,
+      xOffset: xOffset,
+      yOffset: yOffset,
+      zIndex: zIndex
     });
   }
 
@@ -147,8 +189,8 @@ ol.style.Icon.prototype.getRotation = function() {
 
 
 /**
- * Get the url.
- * @return {ol.expr.Expression} Icon url.
+ * Get the URL.
+ * @return {ol.expr.Expression} Icon URL.
  */
 ol.style.Icon.prototype.getUrl = function() {
   return this.url_;
@@ -161,6 +203,33 @@ ol.style.Icon.prototype.getUrl = function() {
  */
 ol.style.Icon.prototype.getWidth = function() {
   return this.width_;
+};
+
+
+/**
+ * Get the xOffset.
+ * @return {ol.expr.Expression} Icon xOffset.
+ */
+ol.style.Icon.prototype.getXOffset = function() {
+  return this.xOffset_;
+};
+
+
+/**
+ * Get the yOffset.
+ * @return {ol.expr.Expression} Icon yOffset.
+ */
+ol.style.Icon.prototype.getYOffset = function() {
+  return this.yOffset_;
+};
+
+
+/**
+ * Get the zIndex.
+ * @return {ol.expr.Expression} Icon zIndex.
+ */
+ol.style.Icon.prototype.getZIndex = function() {
+  return this.zIndex_;
 };
 
 
@@ -195,8 +264,8 @@ ol.style.Icon.prototype.setRotation = function(rotation) {
 
 
 /**
- * Set the url.
- * @param {ol.expr.Expression} url Icon url.
+ * Set the URL.
+ * @param {ol.expr.Expression} url Icon URL.
  */
 ol.style.Icon.prototype.setUrl = function(url) {
   goog.asserts.assertInstanceof(url, ol.expr.Expression);
@@ -215,10 +284,46 @@ ol.style.Icon.prototype.setWidth = function(width) {
 
 
 /**
- * @typedef {{opacity: (number),
- *            rotation: (number)}}
+ * Set the xOffset.
+ * @param {ol.expr.Expression} xOffset Icon xOffset.
+ */
+ol.style.Icon.prototype.setXOffset = function(xOffset) {
+  goog.asserts.assertInstanceof(xOffset, ol.expr.Expression);
+  this.xOffset_ = xOffset;
+};
+
+
+/**
+ * Set the yOffset.
+ * @param {ol.expr.Expression} yOffset Icon yOffset.
+ */
+ol.style.Icon.prototype.setYOffset = function(yOffset) {
+  goog.asserts.assertInstanceof(yOffset, ol.expr.Expression);
+  this.yOffset_ = yOffset;
+};
+
+
+/**
+ * Set the zIndex.
+ * @param {ol.expr.Expression} zIndex Icon zIndex.
+ */
+ol.style.Icon.prototype.setZIndex = function(zIndex) {
+  goog.asserts.assertInstanceof(zIndex, ol.expr.Expression);
+  this.zIndex_ = zIndex;
+};
+
+
+/**
+ * @typedef {{opacity: number,
+ *            rotation: number,
+ *            xOffset: number,
+ *            yOffset: number,
+ *            zIndex: number}}
  */
 ol.style.IconDefaults = {
   opacity: 1,
-  rotation: 0
+  rotation: 0,
+  xOffset: 0,
+  yOffset: 0,
+  zIndex: 0
 };

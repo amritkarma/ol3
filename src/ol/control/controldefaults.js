@@ -1,4 +1,4 @@
-goog.provide('ol.control.defaults');
+goog.provide('ol.control');
 
 goog.require('ol.Collection');
 goog.require('ol.control.Attribution');
@@ -9,6 +9,7 @@ goog.require('ol.control.Zoom');
 /**
  * @param {ol.control.DefaultsOptions=} opt_options Defaults options.
  * @return {ol.Collection} Controls.
+ * @todo stability experimental
  */
 ol.control.defaults = function(opt_options) {
 

@@ -17,6 +17,7 @@ goog.require('ol.style.Symbolizer');
  * @constructor
  * @extends {ol.style.Symbolizer}
  * @param {ol.style.StrokeOptions=} opt_options Stroke options.
+ * @todo stability experimental
  */
 ol.style.Stroke = function(opt_options) {
   goog.base(this);
@@ -49,6 +50,15 @@ ol.style.Stroke = function(opt_options) {
       (options.width instanceof ol.expr.Expression) ?
           options.width : new ol.expr.Literal(options.width);
 
+  /**
+   * @type {ol.expr.Expression}
+   * @private
+   */
+  this.zIndex_ = !goog.isDefAndNotNull(options.zIndex) ?
+      new ol.expr.Literal(ol.style.StrokeDefaults.zIndex) :
+      (options.zIndex instanceof ol.expr.Expression) ?
+          options.zIndex : new ol.expr.Literal(options.zIndex);
+
 };
 goog.inherits(ol.style.Stroke, ol.style.Symbolizer);
 
@@ -71,13 +81,16 @@ ol.style.Stroke.prototype.createLiteral = function(featureOrType) {
       this.color_, feature);
   goog.asserts.assertString(color, 'color must be a string');
 
-  var opacity = ol.expr.evaluateFeature(
-      this.opacity_, feature);
-  goog.asserts.assertNumber(opacity, 'opacity must be a number');
+  var opacity = Number(ol.expr.evaluateFeature(
+      this.opacity_, feature));
+  goog.asserts.assert(!isNaN(opacity), 'opacity must be a number');
 
-  var width = ol.expr.evaluateFeature(
-      this.width_, feature);
-  goog.asserts.assertNumber(width, 'width must be a number');
+  var width = Number(ol.expr.evaluateFeature(
+      this.width_, feature));
+  goog.asserts.assert(!isNaN(width), 'width must be a number');
+
+  var zIndex = Number(ol.expr.evaluateFeature(this.zIndex_, feature));
+  goog.asserts.assert(!isNaN(zIndex), 'zIndex must be a number');
 
   var literal = null;
   if (type === ol.geom.GeometryType.LINESTRING ||
@@ -85,14 +98,16 @@ ol.style.Stroke.prototype.createLiteral = function(featureOrType) {
     literal = new ol.style.LineLiteral({
       color: color,
       opacity: opacity,
-      width: width
+      width: width,
+      zIndex: zIndex
     });
   } else if (type === ol.geom.GeometryType.POLYGON ||
       type === ol.geom.GeometryType.MULTIPOLYGON) {
     literal = new ol.style.PolygonLiteral({
       strokeColor: color,
       strokeOpacity: opacity,
-      strokeWidth: width
+      strokeWidth: width,
+      zIndex: zIndex
     });
   }
 
@@ -128,6 +143,15 @@ ol.style.Stroke.prototype.getWidth = function() {
 
 
 /**
+ * Get the stroke zIndex.
+ * @return {ol.expr.Expression} Stroke zIndex.
+ */
+ol.style.Stroke.prototype.getZIndex = function() {
+  return this.zIndex_;
+};
+
+
+/**
  * Set the stroke color.
  * @param {ol.expr.Expression} color Stroke color.
  */
@@ -158,12 +182,24 @@ ol.style.Stroke.prototype.setWidth = function(width) {
 
 
 /**
- * @typedef {{strokeColor: (string),
- *            strokeOpacity: (number),
- *            strokeWidth: (number)}}
+ * Set the stroke zIndex.
+ * @param {ol.expr.Expression} zIndex Stroke zIndex.
+ */
+ol.style.Stroke.prototype.setZIndex = function(zIndex) {
+  goog.asserts.assertInstanceof(zIndex, ol.expr.Expression);
+  this.zIndex_ = zIndex;
+};
+
+
+/**
+ * @typedef {{strokeColor: string,
+ *            strokeOpacity: number,
+ *            strokeWidth: number,
+ *            zIndex: number}}
  */
 ol.style.StrokeDefaults = {
   color: '#696969',
   opacity: 0.75,
-  width: 1.5
+  width: 1.5,
+  zIndex: 0
 };

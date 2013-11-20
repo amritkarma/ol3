@@ -628,6 +628,71 @@ describe('ol.expr.lib', function() {
   var parse = ol.expr.parse;
   var evaluate = ol.expr.evaluateFeature;
 
+  describe('concat()', function() {
+    var feature = new ol.Feature({
+      str: 'bar',
+      num: 42,
+      bool: false,
+      nul: null
+    });
+
+    it('concatenates strings', function() {
+      expect(evaluate(parse('concat(str, "after")'), feature))
+          .to.be('barafter');
+      expect(evaluate(parse('concat("before", str)'), feature))
+          .to.be('beforebar');
+      expect(evaluate(parse('concat("a", str, "b")'), feature))
+          .to.be('abarb');
+    });
+
+    it('concatenates numbers as strings', function() {
+      expect(evaluate(parse('concat(num, 0)'), feature))
+          .to.be('420');
+      expect(evaluate(parse('concat(0, num)'), feature))
+          .to.be('042');
+      expect(evaluate(parse('concat(42, 42)'), feature))
+          .to.be('4242');
+      expect(evaluate(parse('concat(str, num)'), feature))
+          .to.be('bar42');
+    });
+
+    it('concatenates booleans as strings', function() {
+      expect(evaluate(parse('concat(bool, "foo")'), feature))
+          .to.be('falsefoo');
+      expect(evaluate(parse('concat(true, str)'), feature))
+          .to.be('truebar');
+      expect(evaluate(parse('concat(true, false)'), feature))
+          .to.be('truefalse');
+    });
+
+    it('concatenates nulls as strings', function() {
+      expect(evaluate(parse('concat(nul, "foo")'), feature))
+          .to.be('nullfoo');
+      expect(evaluate(parse('concat(str, null)'), feature))
+          .to.be('barnull');
+    });
+
+  });
+
+  describe('counter()', function() {
+
+    it('increases the counter with every call', function() {
+      var counter = parse('counter()');
+      var start = evaluate(counter);
+      expect(evaluate(counter)).to.be(start + 1);
+      expect(evaluate(counter)).to.be(start + 2);
+    });
+
+    it('increases the counter, starting with a custom value', function() {
+      var counterWithStart = parse('counter(1000)');
+      var start = evaluate(counterWithStart);
+      expect(start > 1000).to.be(true);
+      expect(evaluate(counterWithStart)).to.be(start + 1);
+      expect(evaluate(counterWithStart)).to.be(start + 2);
+    });
+
+  });
+
   describe('extent()', function() {
 
     var nw = new ol.Feature({
@@ -642,10 +707,10 @@ describe('ol.expr.lib', function() {
       ]])
     });
 
-    var north = parse('extent(-100, 100, 40, 60)');
-    var south = parse('extent(-100, 100, -60, -40)');
-    var east = parse('extent(80, 100, -50, 50)');
-    var west = parse('extent(-100, -80, -50, 50)');
+    var north = parse('extent(-100, 40, 100, 60)');
+    var south = parse('extent(-100, -60, 100, -40)');
+    var east = parse('extent(80, -50, 100, 50)');
+    var west = parse('extent(-100, -50, -80, 50)');
 
     it('evaluates to true for features within given extent', function() {
 
@@ -666,16 +731,16 @@ describe('ol.expr.lib', function() {
   describe('fid()', function() {
 
     var one = new ol.Feature();
-    one.setFeatureId('one');
+    one.setId('one');
 
     var two = new ol.Feature();
-    two.setFeatureId('two');
+    two.setId('two');
 
     var three = new ol.Feature();
-    three.setFeatureId('three');
+    three.setId('three');
 
     var four = new ol.Feature();
-    four.setFeatureId('four');
+    four.setId('four');
 
     var odd = parse('fid("one", "three")');
     var even = parse('fid("two", "four")');
@@ -823,6 +888,24 @@ describe('ol.expr.lib', function() {
         function() {
           expect(evaluate(ieq2, two), false);
         });
+
+  });
+
+  describe('renderIntent()', function() {
+
+    var feature = new ol.Feature();
+    feature.setRenderIntent('foo');
+
+    var isFoo = parse('renderIntent("foo")');
+    var isBar = parse('renderIntent("bar")');
+
+    it('True when renderIntent matches', function() {
+      expect(evaluate(isFoo, feature), true);
+    });
+
+    it('False when renderIntent does not match', function() {
+      expect(evaluate(isBar, feature), false);
+    });
 
   });
 

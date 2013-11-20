@@ -18,8 +18,10 @@ goog.require('ol.style.Stroke');
  * @constructor
  * @extends {ol.style.Point}
  * @param {ol.style.ShapeOptions} options Shape options.
+ * @todo stability experimental
  */
 ol.style.Shape = function(options) {
+  goog.base(this);
 
   /**
    * @type {ol.style.ShapeType}
@@ -53,7 +55,17 @@ ol.style.Shape = function(options) {
   goog.asserts.assert(this.fill_ || this.stroke_,
       'Stroke or fill must be provided');
 
+  /**
+   * @type {ol.expr.Expression}
+   * @private
+   */
+  this.zIndex_ = !goog.isDefAndNotNull(options.zIndex) ?
+      new ol.expr.Literal(ol.style.ShapeDefaults.zIndex) :
+      (options.zIndex instanceof ol.expr.Expression) ?
+          options.zIndex : new ol.expr.Literal(options.zIndex);
+
 };
+goog.inherits(ol.style.Shape, ol.style.Point);
 
 
 /**
@@ -73,17 +85,17 @@ ol.style.Shape.prototype.createLiteral = function(featureOrType) {
   var literal = null;
   if (type === ol.geom.GeometryType.POINT ||
       type === ol.geom.GeometryType.MULTIPOINT) {
-    var size = ol.expr.evaluateFeature(this.size_, feature);
-    goog.asserts.assertNumber(size, 'size must be a number');
+    var size = Number(ol.expr.evaluateFeature(this.size_, feature));
+    goog.asserts.assert(!isNaN(size), 'size must be a number');
 
     var fillColor, fillOpacity;
     if (!goog.isNull(this.fill_)) {
       fillColor = ol.expr.evaluateFeature(this.fill_.getColor(), feature);
       goog.asserts.assertString(
           fillColor, 'fillColor must be a string');
-      fillOpacity = ol.expr.evaluateFeature(this.fill_.getOpacity(), feature);
-      goog.asserts.assertNumber(
-          fillOpacity, 'fillOpacity must be a number');
+      fillOpacity = Number(ol.expr.evaluateFeature(
+          this.fill_.getOpacity(), feature));
+      goog.asserts.assert(!isNaN(fillOpacity), 'fillOpacity must be a number');
     }
 
     var strokeColor, strokeOpacity, strokeWidth;
@@ -91,14 +103,17 @@ ol.style.Shape.prototype.createLiteral = function(featureOrType) {
       strokeColor = ol.expr.evaluateFeature(this.stroke_.getColor(), feature);
       goog.asserts.assertString(
           strokeColor, 'strokeColor must be a string');
-      strokeOpacity = ol.expr.evaluateFeature(this.stroke_.getOpacity(),
-          feature);
-      goog.asserts.assertNumber(
-          strokeOpacity, 'strokeOpacity must be a number');
-      strokeWidth = ol.expr.evaluateFeature(this.stroke_.getWidth(), feature);
-      goog.asserts.assertNumber(
-          strokeWidth, 'strokeWidth must be a number');
+      strokeOpacity = Number(ol.expr.evaluateFeature(
+          this.stroke_.getOpacity(), feature));
+      goog.asserts.assert(!isNaN(strokeOpacity),
+          'strokeOpacity must be a number');
+      strokeWidth = Number(ol.expr.evaluateFeature(
+          this.stroke_.getWidth(), feature));
+      goog.asserts.assert(!isNaN(strokeWidth), 'strokeWidth must be a number');
     }
+
+    var zIndex = Number(ol.expr.evaluateFeature(this.zIndex_, feature));
+    goog.asserts.assert(!isNaN(zIndex), 'zIndex must be a number');
 
     literal = new ol.style.ShapeLiteral({
       type: this.type_,
@@ -107,7 +122,8 @@ ol.style.Shape.prototype.createLiteral = function(featureOrType) {
       fillOpacity: fillOpacity,
       strokeColor: strokeColor,
       strokeOpacity: strokeOpacity,
-      strokeWidth: strokeWidth
+      strokeWidth: strokeWidth,
+      zIndex: zIndex
     });
   }
 
@@ -148,6 +164,15 @@ ol.style.Shape.prototype.getStroke = function() {
  */
 ol.style.Shape.prototype.getType = function() {
   return this.type_;
+};
+
+
+/**
+ * Get the shape zIndex.
+ * @return {ol.expr.Expression} Shape zIndex.
+ */
+ol.style.Shape.prototype.getZIndex = function() {
+  return this.zIndex_;
 };
 
 
@@ -195,10 +220,22 @@ ol.style.Shape.prototype.setType = function(type) {
 
 
 /**
- * @typedef {{type: (ol.style.ShapeType),
- *            size: (number)}}
+ * Set the shape zIndex.
+ * @param {ol.expr.Expression} zIndex Shape zIndex.
+ */
+ol.style.Shape.prototype.setZIndex = function(zIndex) {
+  goog.asserts.assertInstanceof(zIndex, ol.expr.Expression);
+  this.zIndex_ = zIndex;
+};
+
+
+/**
+ * @typedef {{type: ol.style.ShapeType,
+ *            size: number,
+ *            zIndex: number}}
  */
 ol.style.ShapeDefaults = {
   type: ol.style.ShapeType.CIRCLE,
-  size: 5
+  size: 5,
+  zIndex: 0
 };
