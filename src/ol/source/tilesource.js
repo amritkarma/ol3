@@ -18,7 +18,6 @@ goog.require('ol.tilegrid.TileGrid');
  *            opaque: (boolean|undefined),
  *            projection: ol.proj.ProjectionLike,
  *            tileGrid: (ol.tilegrid.TileGrid|undefined)}}
- * @todo stability experimental
  */
 ol.source.TileOptions;
 
@@ -28,7 +27,6 @@ ol.source.TileOptions;
  * @constructor
  * @extends {ol.source.Source}
  * @param {ol.source.TileOptions} options Tile source options.
- * @todo stability experimental
  */
 ol.source.Tile = function(options) {
 
@@ -107,6 +105,14 @@ ol.source.Tile.prototype.findLoadedTiles = function(loadedTilesByZ,
 
 
 /**
+ * @return {number} Gutter.
+ */
+ol.source.Tile.prototype.getGutter = function() {
+  return 0;
+};
+
+
+/**
  * @param {number} z Z.
  * @param {number} x X.
  * @param {number} y Y.
@@ -136,6 +142,7 @@ ol.source.Tile.prototype.getResolutions = function() {
  * @param {number} z Tile coordinate z.
  * @param {number} x Tile coordinate x.
  * @param {number} y Tile coordinate y.
+ * @param {number} pixelRatio Pixel ratio.
  * @param {ol.proj.Projection=} opt_projection Projection.
  * @return {!ol.Tile} Tile.
  */
@@ -144,9 +151,36 @@ ol.source.Tile.prototype.getTile = goog.abstractMethod;
 
 /**
  * @return {ol.tilegrid.TileGrid} Tile grid.
+ * @todo api
  */
 ol.source.Tile.prototype.getTileGrid = function() {
   return this.tileGrid;
+};
+
+
+/**
+ * @param {ol.proj.Projection} projection Projection.
+ * @return {ol.tilegrid.TileGrid} Tile grid.
+ */
+ol.source.Tile.prototype.getTileGridForProjection = function(projection) {
+  if (goog.isNull(this.tileGrid)) {
+    return ol.tilegrid.getForProjection(projection);
+  } else {
+    return this.tileGrid;
+  }
+};
+
+
+/**
+ * @param {number} z Z.
+ * @param {number} pixelRatio Pixel ratio.
+ * @param {ol.proj.Projection} projection Projection.
+ * @return {number} Tile size.
+ */
+ol.source.Tile.prototype.getTilePixelSize =
+    function(z, pixelRatio, projection) {
+  var tileGrid = this.getTileGridForProjection(projection);
+  return tileGrid.getTileSize(z);
 };
 
 

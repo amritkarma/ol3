@@ -1,6 +1,7 @@
 goog.provide('ol.dom.Input');
 goog.provide('ol.dom.InputProperty');
 
+goog.require('goog.asserts');
 goog.require('goog.events');
 goog.require('goog.events.EventType');
 goog.require('ol.Object');
@@ -28,22 +29,19 @@ ol.dom.InputProperty = {
  * @constructor
  * @extends {ol.Object}
  * @param {Element} target Target element.
- * @todo stability experimental
- * @todo observable value {string} the value of the Input
- * @todo observable valueAsNumber {number} the value of the Input, converted to
- *       a number if possible
- * @todo observable checked {boolean} the checked state of the Input
+ * @todo api
  */
 ol.dom.Input = function(target) {
   goog.base(this);
 
   /**
    * @private
-   * @type {Element}
+   * @type {HTMLInputElement}
    */
-  this.target_ = target;
+  this.target_ = /** @type {HTMLInputElement} */ (target);
 
-  goog.events.listen(this.target_, goog.events.EventType.CHANGE,
+  goog.events.listen(this.target_,
+      [goog.events.EventType.CHANGE, goog.events.EventType.INPUT],
       this.handleInputChanged_, false, this);
 
   goog.events.listen(this,
@@ -58,8 +56,9 @@ goog.inherits(ol.dom.Input, ol.Object);
 
 /**
  * If the input is a checkbox, return whether or not the checbox is checked.
- * @return {boolean|undefined} checked.
- * @todo stability experimental
+ * @return {boolean|undefined} The checked state of the Input.
+ * @todo observable
+ * @todo api
  */
 ol.dom.Input.prototype.getChecked = function() {
   return /** @type {boolean} */ (this.get(ol.dom.InputProperty.CHECKED));
@@ -72,8 +71,9 @@ goog.exportProperty(
 
 /**
  * Get the value of the input.
- * @return {string|undefined} input value.
- * @todo stability experimental
+ * @return {string|undefined} The value of the Input.
+ * @todo observable
+ * @todo api
  */
 ol.dom.Input.prototype.getValue = function() {
   return /** @type {string} */ (this.get(ol.dom.InputProperty.VALUE));
@@ -86,8 +86,9 @@ goog.exportProperty(
 
 /**
  * Sets the value of the input.
- * @param {string} value Value.
- * @todo stability experimental
+ * @param {string} value The value of the Input.
+ * @todo observable
+ * @todo api
  */
 ol.dom.Input.prototype.setValue = function(value) {
   this.set(ol.dom.InputProperty.VALUE, value);
@@ -100,8 +101,9 @@ goog.exportProperty(
 
 /**
  * Set whether or not a checkbox is checked.
- * @param {boolean} checked Checked.
- * @todo stability experimental
+ * @param {boolean} checked The checked state of the Input.
+ * @todo observable
+ * @todo api
  */
 ol.dom.Input.prototype.setChecked = function(checked) {
   this.set(ol.dom.InputProperty.CHECKED, checked);
@@ -113,28 +115,33 @@ goog.exportProperty(
 
 
 /**
+ * @param {goog.events.BrowserEvent} browserEvent Browser event.
  * @private
  */
-ol.dom.Input.prototype.handleInputChanged_ = function() {
-  if (this.target_.type === 'checkbox' || this.target_.type === 'radio') {
-    this.setChecked(this.target_.checked);
+ol.dom.Input.prototype.handleInputChanged_ = function(browserEvent) {
+  goog.asserts.assert(browserEvent.currentTarget == this.target_);
+  var target = this.target_;
+  if (target.type === 'checkbox' || target.type === 'radio') {
+    this.setChecked(target.checked);
   } else {
-    this.setValue(this.target_.value);
+    this.setValue(target.value);
   }
 };
 
 
 /**
+ * @param {goog.events.Event} event Change event.
  * @private
  */
-ol.dom.Input.prototype.handleCheckedChanged_ = function() {
-  this.target_.checked = this.getChecked();
+ol.dom.Input.prototype.handleCheckedChanged_ = function(event) {
+  this.target_.checked = /** @type {boolean} */ (this.getChecked());
 };
 
 
 /**
+ * @param {goog.events.Event} event Change event.
  * @private
  */
-ol.dom.Input.prototype.handleValueChanged_ = function() {
-  this.target_.value = this.getValue();
+ol.dom.Input.prototype.handleValueChanged_ = function(event) {
+  this.target_.value =  /** @type {string} */ (this.getValue());
 };

@@ -3,18 +3,14 @@
 goog.provide('ol.interaction.DragRotateAndZoom');
 
 goog.require('goog.asserts');
+goog.require('goog.functions');
 goog.require('goog.math.Vec2');
+goog.require('ol');
 goog.require('ol.ViewHint');
 goog.require('ol.events.ConditionType');
 goog.require('ol.events.condition');
-goog.require('ol.interaction.Drag');
 goog.require('ol.interaction.Interaction');
-
-
-/**
- * @define {number} Animation duration.
- */
-ol.interaction.DRAGROTATEANDZOOM_ANIMATION_DURATION = 400;
+goog.require('ol.interaction.Pointer');
 
 
 
@@ -23,11 +19,14 @@ ol.interaction.DRAGROTATEANDZOOM_ANIMATION_DURATION = 400;
  * on the map.  By default, this interaction is limited to when the shift
  * key is held down.
  *
- * This interaction is not included in the default interactions.
+ * This interaction is only supported for mouse devices.
+ *
+ * And this interaction is not included in the default interactions.
+ *
  * @constructor
- * @extends {ol.interaction.Drag}
- * @param {ol.interaction.DragRotateAndZoomOptions=} opt_options Options.
- * @todo stability experimental
+ * @extends {ol.interaction.Pointer}
+ * @param {olx.interaction.DragRotateAndZoomOptions=} opt_options Options.
+ * @todo api
  */
 ol.interaction.DragRotateAndZoom = function(opt_options) {
 
@@ -61,17 +60,22 @@ ol.interaction.DragRotateAndZoom = function(opt_options) {
   this.lastScaleDelta_ = 0;
 
 };
-goog.inherits(ol.interaction.DragRotateAndZoom, ol.interaction.Drag);
+goog.inherits(ol.interaction.DragRotateAndZoom,
+    ol.interaction.Pointer);
 
 
 /**
  * @inheritDoc
  */
-ol.interaction.DragRotateAndZoom.prototype.handleDrag =
+ol.interaction.DragRotateAndZoom.prototype.handlePointerDrag =
     function(mapBrowserEvent) {
+  if (!ol.events.condition.mouseOnly(mapBrowserEvent)) {
+    return;
+  }
+
   var map = mapBrowserEvent.map;
   var size = map.getSize();
-  var offset = mapBrowserEvent.getPixel();
+  var offset = mapBrowserEvent.pixel;
   var delta = new goog.math.Vec2(
       offset[0] - size[0] / 2,
       size[1] / 2 - offset[1]);
@@ -80,7 +84,7 @@ ol.interaction.DragRotateAndZoom.prototype.handleDrag =
   // FIXME works for View2D only
   var view = map.getView().getView2D();
   var view2DState = view.getView2DState();
-  map.requestRenderFrame();
+  map.render();
   if (goog.isDef(this.lastAngle_)) {
     var angleDelta = theta - this.lastAngle_;
     ol.interaction.Interaction.rotateWithoutConstraints(
@@ -101,30 +105,37 @@ ol.interaction.DragRotateAndZoom.prototype.handleDrag =
 /**
  * @inheritDoc
  */
-ol.interaction.DragRotateAndZoom.prototype.handleDragEnd =
+ol.interaction.DragRotateAndZoom.prototype.handlePointerUp =
     function(mapBrowserEvent) {
+  if (!ol.events.condition.mouseOnly(mapBrowserEvent)) {
+    return true;
+  }
+
   var map = mapBrowserEvent.map;
   // FIXME works for View2D only
-  var view = map.getView().getView2D();
+  var view = map.getView();
   view.setHint(ol.ViewHint.INTERACTING, -1);
-  var view2DState = view.getView2DState();
+  var view2D = view.getView2D();
+  var view2DState = view2D.getView2DState();
   var direction = this.lastScaleDelta_ - 1;
-  map.withFrozenRendering(function() {
-    ol.interaction.Interaction.rotate(map, view, view2DState.rotation);
-    ol.interaction.Interaction.zoom(map, view, view2DState.resolution,
-        undefined, ol.interaction.DRAGROTATEANDZOOM_ANIMATION_DURATION,
-        direction);
-  });
+  ol.interaction.Interaction.rotate(map, view2D, view2DState.rotation);
+  ol.interaction.Interaction.zoom(map, view2D, view2DState.resolution,
+      undefined, ol.DRAGROTATEANDZOOM_ANIMATION_DURATION,
+      direction);
   this.lastScaleDelta_ = 0;
-  return true;
+  return false;
 };
 
 
 /**
  * @inheritDoc
  */
-ol.interaction.DragRotateAndZoom.prototype.handleDragStart =
+ol.interaction.DragRotateAndZoom.prototype.handlePointerDown =
     function(mapBrowserEvent) {
+  if (!ol.events.condition.mouseOnly(mapBrowserEvent)) {
+    return false;
+  }
+
   if (this.condition_(mapBrowserEvent)) {
     mapBrowserEvent.map.getView().setHint(ol.ViewHint.INTERACTING, 1);
     this.lastAngle_ = undefined;
@@ -134,3 +145,12 @@ ol.interaction.DragRotateAndZoom.prototype.handleDragStart =
     return false;
   }
 };
+
+
+/**
+ * @inheritDoc
+ * Stop the event if it was handled, so that interaction `DragZoom`
+ * does not interfere.
+ */
+ol.interaction.DragRotateAndZoom.prototype.shouldStopEvent =
+    goog.functions.identity;

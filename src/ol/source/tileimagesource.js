@@ -1,8 +1,6 @@
 goog.provide('ol.source.TileImage');
 
 goog.require('goog.asserts');
-goog.require('ol.Attribution');
-goog.require('ol.Extent');
 goog.require('ol.ImageTile');
 goog.require('ol.Tile');
 goog.require('ol.TileCache');
@@ -12,30 +10,14 @@ goog.require('ol.TileState');
 goog.require('ol.TileUrlFunction');
 goog.require('ol.TileUrlFunctionType');
 goog.require('ol.source.Tile');
-goog.require('ol.tilegrid.TileGrid');
-
-
-/**
- * @typedef {{attributions: (Array.<ol.Attribution>|undefined),
- *            crossOrigin: (null|string|undefined),
- *            extent: (ol.Extent|undefined),
- *            logo: (string|undefined),
- *            opaque: (boolean|undefined),
- *            projection: ol.proj.ProjectionLike,
- *            tileGrid: (ol.tilegrid.TileGrid|undefined),
- *            tileLoadFunction: (ol.TileLoadFunctionType|undefined),
- *            tileUrlFunction: (ol.TileUrlFunctionType|undefined)}}
- * @todo stability experimental
- */
-ol.source.TileImageOptions;
 
 
 
 /**
  * @constructor
  * @extends {ol.source.Tile}
- * @param {ol.source.TileImageOptions} options Image tile options.
- * @todo stability experimental
+ * @param {olx.source.TileImageOptions} options Image tile options.
+ * @todo api
  */
 ol.source.TileImage = function(options) {
 
@@ -57,24 +39,32 @@ ol.source.TileImage = function(options) {
       ol.TileUrlFunction.nullTileUrlFunction;
 
   /**
-   * @private
+   * @protected
    * @type {?string}
    */
-  this.crossOrigin_ =
+  this.crossOrigin =
       goog.isDef(options.crossOrigin) ? options.crossOrigin : null;
 
   /**
-   * @private
+   * @protected
    * @type {ol.TileCache}
    */
-  this.tileCache_ = new ol.TileCache();
+  this.tileCache = new ol.TileCache();
 
   /**
-   * @private
+   * @protected
    * @type {ol.TileLoadFunctionType}
    */
-  this.tileLoadFunction_ = goog.isDef(options.tileLoadFunction) ?
+  this.tileLoadFunction = goog.isDef(options.tileLoadFunction) ?
       options.tileLoadFunction : ol.source.TileImage.defaultTileLoadFunction;
+
+  /**
+   * @protected
+   * @type {function(new: ol.ImageTile, ol.TileCoord, ol.TileState, string,
+   *        ?string, ol.TileLoadFunctionType)}
+   */
+  this.tileClass = goog.isDef(options.tileClass) ?
+      options.tileClass : ol.ImageTile;
 
 };
 goog.inherits(ol.source.TileImage, ol.source.Tile);
@@ -93,7 +83,7 @@ ol.source.TileImage.defaultTileLoadFunction = function(imageTile, src) {
  * @inheritDoc
  */
 ol.source.TileImage.prototype.canExpireCache = function() {
-  return this.tileCache_.canExpireCache();
+  return this.tileCache.canExpireCache();
 };
 
 
@@ -101,28 +91,29 @@ ol.source.TileImage.prototype.canExpireCache = function() {
  * @inheritDoc
  */
 ol.source.TileImage.prototype.expireCache = function(usedTiles) {
-  this.tileCache_.expireCache(usedTiles);
+  this.tileCache.expireCache(usedTiles);
 };
 
 
 /**
  * @inheritDoc
  */
-ol.source.TileImage.prototype.getTile = function(z, x, y, projection) {
+ol.source.TileImage.prototype.getTile =
+    function(z, x, y, pixelRatio, projection) {
   var tileCoordKey = this.getKeyZXY(z, x, y);
-  if (this.tileCache_.containsKey(tileCoordKey)) {
-    return /** @type {!ol.Tile} */ (this.tileCache_.get(tileCoordKey));
+  if (this.tileCache.containsKey(tileCoordKey)) {
+    return /** @type {!ol.Tile} */ (this.tileCache.get(tileCoordKey));
   } else {
     goog.asserts.assert(projection);
     var tileCoord = new ol.TileCoord(z, x, y);
-    var tileUrl = this.tileUrlFunction(tileCoord, projection);
-    var tile = new ol.ImageTile(
+    var tileUrl = this.tileUrlFunction(tileCoord, pixelRatio, projection);
+    var tile = new this.tileClass(
         tileCoord,
         goog.isDef(tileUrl) ? ol.TileState.IDLE : ol.TileState.EMPTY,
         goog.isDef(tileUrl) ? tileUrl : '',
-        this.crossOrigin_,
-        this.tileLoadFunction_);
-    this.tileCache_.set(tileCoordKey, tile);
+        this.crossOrigin,
+        this.tileLoadFunction);
+    this.tileCache.set(tileCoordKey, tile);
     return tile;
   }
 };
@@ -135,7 +126,7 @@ ol.source.TileImage.prototype.setTileUrlFunction = function(tileUrlFunction) {
   // FIXME It should be possible to be more intelligent and avoid clearing the
   // FIXME cache.  The tile URL function would need to be incorporated into the
   // FIXME cache key somehow.
-  this.tileCache_.clear();
+  this.tileCache.clear();
   this.tileUrlFunction = tileUrlFunction;
   this.dispatchChangeEvent();
 };
@@ -146,7 +137,7 @@ ol.source.TileImage.prototype.setTileUrlFunction = function(tileUrlFunction) {
  */
 ol.source.TileImage.prototype.useTile = function(z, x, y) {
   var tileCoordKey = this.getKeyZXY(z, x, y);
-  if (this.tileCache_.containsKey(tileCoordKey)) {
-    this.tileCache_.get(tileCoordKey);
+  if (this.tileCache.containsKey(tileCoordKey)) {
+    this.tileCache.get(tileCoordKey);
   }
 };

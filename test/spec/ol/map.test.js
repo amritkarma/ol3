@@ -1,53 +1,4 @@
 goog.provide('ol.test.Map');
-goog.provide('ol.test.RendererHints');
-
-describe('ol.RendererHints', function() {
-
-  describe('#createFromQueryData()', function() {
-
-    var savedGoogGlobal;
-
-    beforeEach(function() {
-      savedGoogGlobal = goog.global;
-      goog.global = {};
-    });
-
-    afterEach(function() {
-      goog.global = savedGoogGlobal;
-    });
-
-    it('returns defaults when no query string', function() {
-      goog.global.location = {search: ''};
-      var hints = ol.RendererHints.createFromQueryData();
-      expect(hints).to.be(ol.DEFAULT_RENDERER_HINTS);
-    });
-
-    it('returns defaults when no "renderer" or "renderers"', function() {
-      goog.global.location = {search: '?foo=bar'};
-      var hints = ol.RendererHints.createFromQueryData();
-      expect(hints).to.be(ol.DEFAULT_RENDERER_HINTS);
-    });
-
-    it('returns array of one for "renderer"', function() {
-      goog.global.location = {search: '?renderer=bogus'};
-      var hints = ol.RendererHints.createFromQueryData();
-      expect(hints).to.eql(['bogus']);
-    });
-
-    it('accepts comma delimited list for "renderers"', function() {
-      goog.global.location = {search: '?renderers=one,two'};
-      var hints = ol.RendererHints.createFromQueryData();
-      expect(hints).to.eql(['one', 'two']);
-    });
-
-    it('works with "renderer" in second position', function() {
-      goog.global.location = {search: '?foo=bar&renderer=one'};
-      var hints = ol.RendererHints.createFromQueryData();
-      expect(hints).to.eql(['one']);
-    });
-
-  });
-});
 
 describe('ol.Map', function() {
 
@@ -97,6 +48,130 @@ describe('ol.Map', function() {
     });
   });
 
+  describe('moveend event', function() {
+
+    var target, view, map;
+
+    beforeEach(function() {
+      target = document.createElement('div');
+
+      var style = target.style;
+      style.position = 'absolute';
+      style.left = '-1000px';
+      style.top = '-1000px';
+      style.width = '360px';
+      style.height = '180px';
+      document.body.appendChild(target);
+
+      view = new ol.View2D({
+        projection: 'EPSG:4326'
+      });
+      map = new ol.Map({
+        target: target,
+        view: view,
+        layers: [
+          new ol.layer.Tile({
+            source: new ol.source.XYZ({
+              url: '#{x}/{y}/{z}'
+            })
+          })
+        ]
+      });
+    });
+
+    afterEach(function() {
+      goog.dispose(map);
+      document.body.removeChild(target);
+    });
+
+    it('is fired only once after view changes', function(done) {
+      var center = [10, 20];
+      var zoom = 3;
+      var calls = 0;
+      map.on('moveend', function() {
+        ++calls;
+        expect(calls).to.be(1);
+        expect(view.getCenter()).to.eql(center);
+        expect(view.getZoom()).to.be(zoom);
+        window.setTimeout(done, 1000);
+      });
+
+      view.setCenter(center);
+      view.setZoom(zoom);
+    });
+
+  });
+
+  describe('#render()', function() {
+
+    var target, map;
+
+    beforeEach(function() {
+      target = document.createElement('div');
+      var style = target.style;
+      style.position = 'absolute';
+      style.left = '-1000px';
+      style.top = '-1000px';
+      style.width = '360px';
+      style.height = '180px';
+      document.body.appendChild(target);
+      map = new ol.Map({
+        target: target,
+        view: new ol.View2D({
+          projection: 'EPSG:4326',
+          center: [0, 0],
+          resolution: 1
+        })
+      });
+    });
+
+    afterEach(function() {
+      goog.dispose(map);
+      document.body.removeChild(target);
+    });
+
+    it('results in an postrender event', function(done) {
+
+      map.render();
+      map.on('postrender', function(event) {
+        expect(event).to.be.a(ol.MapEvent);
+        var frameState = event.frameState;
+        expect(frameState).not.to.be(null);
+        done();
+      });
+
+    });
+
+    it('results in an postrender event (for zero height map)', function(done) {
+      target.style.height = '0px';
+      map.updateSize();
+
+      map.render();
+      map.on('postrender', function(event) {
+        expect(event).to.be.a(ol.MapEvent);
+        var frameState = event.frameState;
+        expect(frameState).to.be(null);
+        done();
+      });
+
+    });
+
+    it('results in an postrender event (for zero width map)', function(done) {
+      target.style.width = '0px';
+      map.updateSize();
+
+      map.render();
+      map.on('postrender', function(event) {
+        expect(event).to.be.a(ol.MapEvent);
+        var frameState = event.frameState;
+        expect(frameState).to.be(null);
+        done();
+      });
+
+    });
+
+  });
+
   describe('dispose', function() {
     var map;
 
@@ -120,13 +195,12 @@ describe('ol.Map', function() {
       options = {
         altShiftDragRotate: false,
         doubleClickZoom: false,
-        dragPan: false,
         keyboard: false,
         mouseWheelZoom: false,
         shiftDragZoom: false,
-        touchPan: false,
-        touchRotate: false,
-        touchZoom: false
+        dragPan: false,
+        pinchRotate: false,
+        pinchZoom: false
       };
     });
 
@@ -171,9 +245,11 @@ describe('ol.Map', function() {
 goog.require('goog.dispose');
 goog.require('goog.dom');
 goog.require('ol.Map');
-goog.require('ol.RendererHint');
-goog.require('ol.RendererHints');
+goog.require('ol.MapEvent');
+goog.require('ol.View2D');
 goog.require('ol.interaction');
 goog.require('ol.interaction.Interaction');
 goog.require('ol.interaction.DoubleClickZoom');
 goog.require('ol.interaction.MouseWheelZoom');
+goog.require('ol.layer.Tile');
+goog.require('ol.source.XYZ');

@@ -1,35 +1,35 @@
+goog.require('ol.BrowserFeature');
 goog.require('ol.Map');
-goog.require('ol.RendererHints');
 goog.require('ol.View2D');
 goog.require('ol.dom.Input');
 goog.require('ol.layer.Tile');
 goog.require('ol.source.OSM');
-goog.require('ol.webgl');
 
 
-if (!ol.webgl.SUPPORTED) {
-  var inputs = document.getElementsByClassName('webgl');
-  for (var i = 0, len = inputs.length; i < len; i++) {
-    inputs[i].disabled = true;
-  }
-  var info = document.getElementById('no-webgl');
-  /**
-   * display warning message
-   */
-  info.style.display = '';
+function checkWebGL(evt) {
+  document.getElementById('no-webgl').style.display =
+      ol.BrowserFeature.HAS_WEBGL ? 'none' : '';
+  document.getElementById('has-webgl').style.display =
+      ol.BrowserFeature.HAS_WEBGL && !evt.glContext ? '' : 'none';
+  document.getElementById('webgl').style.display =
+      evt.glContext ? '' : 'none';
 }
 
 var layer = new ol.layer.Tile({
   source: new ol.source.OSM()
 });
+layer.once('precompose', checkWebGL);
+
+var view = new ol.View2D({
+  center: [0, 0],
+  zoom: 2
+});
+
 var map = new ol.Map({
   layers: [layer],
-  renderers: ol.RendererHints.createFromQueryData(),
+  renderer: exampleNS.getRendererFromQueryString(),
   target: 'map',
-  view: new ol.View2D({
-    center: [0, 0],
-    zoom: 2
-  })
+  view: view
 });
 
 var visible = new ol.dom.Input(document.getElementById('visible'));
@@ -57,9 +57,7 @@ brightness.bindTo('value', layer, 'brightness')
 
 
 var rotation = new ol.dom.Input(document.getElementById('rotation'));
-rotation.bindTo('value', map.getView(), 'rotation')
-    .transform(parseFloat, String);
+rotation.bindTo('value', view, 'rotation').transform(parseFloat, String);
 
 var resolution = new ol.dom.Input(document.getElementById('resolution'));
-resolution.bindTo('value', map.getView(), 'resolution')
-    .transform(parseFloat, String);
+resolution.bindTo('value', view, 'resolution').transform(parseFloat, String);

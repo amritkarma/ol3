@@ -13,7 +13,7 @@ Below you'll find a complete working example.  Create a new file, copy in the co
 <!doctype html>
 <html lang="en">
   <head>
-    <link rel="stylesheet" href="http://ol3js.org/en/{{ latest }}/build/ol.css" type="text/css">
+    <link rel="stylesheet" href="http://ol3js.org/en/{{ latest }}/css/ol.css" type="text/css">
     <style>
       .map {
         height: 400px;
@@ -31,7 +31,7 @@ Below you'll find a complete working example.  Create a new file, copy in the co
         target: 'map',
         layers: [
           new ol.layer.Tile({
-            source: new ol.source.MapQuestOpenAerial()
+            source: new ol.source.MapQuest({layer: 'sat'})
           })
         ],
         view: new ol.View2D({
@@ -72,7 +72,8 @@ The map in the application is contained in a [`<div>` HTML element](http://en.wi
 ```xml
   <style>
     .map {
-      height: 400px; width: 100%;
+      height: 400px;
+      width: 100%;
     }
   </style>
 ```
@@ -84,7 +85,7 @@ The map in the application is contained in a [`<div>` HTML element](http://en.wi
     target: 'map',
     layers: [
       new ol.layer.Tile({
-        source: new ol.source.MapQuestOpenAerial()
+        source: new ol.source.MapQuest({layer: 'sat'})
       })
     ],
     view: new ol.View2D({
@@ -113,7 +114,7 @@ The `layers: [ ... ]` array is used to define the list of layers available in th
 ```js
     layers: [
       new ol.layer.Tile({
-        source: new ol.source.MapQuestOpenAerial()
+        source: new ol.source.MapQuest({layer: 'sat'})
       })
     ]
 ```

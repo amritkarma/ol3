@@ -21,6 +21,7 @@ ol.QuadKeyCharCode = {
  * @param {number} z Zoom level.
  * @param {number} x X.
  * @param {number} y Y.
+ * @struct
  */
 ol.TileCoord = function(z, x, y) {
 
@@ -117,6 +118,7 @@ ol.TileCoord.getKeyZXY = function(z, x, y) {
 /**
  * @param {Array.<number>=} opt_result Optional array to reuse.
  * @return {Array.<number>} Array of z, x, y.
+ * @todo api
  */
 ol.TileCoord.prototype.getZXY = function(opt_result) {
   if (goog.isDef(opt_result)) {

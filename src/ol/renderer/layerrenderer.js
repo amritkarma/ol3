@@ -1,7 +1,6 @@
 goog.provide('ol.renderer.Layer');
 
 goog.require('goog.Disposable');
-goog.require('ol.FrameState');
 goog.require('ol.Image');
 goog.require('ol.ImageState');
 goog.require('ol.Tile');
@@ -20,6 +19,8 @@ goog.require('ol.source.Tile');
  * @extends {goog.Disposable}
  * @param {ol.renderer.Map} mapRenderer Map renderer.
  * @param {ol.layer.Layer} layer Layer.
+ * @suppress {checkStructDictInheritance}
+ * @struct
  */
 ol.renderer.Layer = function(mapRenderer, layer) {
 
@@ -43,23 +44,15 @@ goog.inherits(ol.renderer.Layer, goog.Disposable);
 
 
 /**
- * @param {ol.Pixel} pixel Pixel coordinate relative to the map viewport.
- * @param {function(string, ol.layer.Layer)} success Callback for
- *     successful queries. The passed arguments are the resulting feature
- *     information and the layer.
- * @param {function()=} opt_error Callback for unsuccessful queries.
+ * @param {ol.Coordinate} coordinate Coordinate.
+ * @param {olx.FrameState} frameState Frame state.
+ * @param {function(this: S, ol.Feature, ol.layer.Layer): T} callback Feature
+ *     callback.
+ * @param {S} thisArg Value to use as `this` when executing `callback`.
+ * @return {T|undefined} Callback result.
+ * @template S,T
  */
-ol.renderer.Layer.prototype.getFeatureInfoForPixel =
-    function(pixel, success, opt_error) {
-  var layer = this.getLayer();
-  var source = layer.getSource();
-  if (goog.isFunction(source.getFeatureInfoForPixel)) {
-    var callback = function(layerFeatureInfo) {
-      success(layerFeatureInfo, layer);
-    };
-    source.getFeatureInfoForPixel(pixel, this.getMap(), callback, opt_error);
-  }
-};
+ol.renderer.Layer.prototype.forEachFeatureAtPixel = goog.nullFunction;
 
 
 /**
@@ -103,10 +96,10 @@ ol.renderer.Layer.prototype.handleImageChange = function(event) {
 
 
 /**
- * @param {ol.FrameState} frameState Frame state.
+ * @param {olx.FrameState} frameState Frame state.
  * @param {ol.layer.LayerState} layerState Layer state.
  */
-ol.renderer.Layer.prototype.renderFrame = goog.abstractMethod;
+ol.renderer.Layer.prototype.prepareFrame = goog.abstractMethod;
 
 
 /**
@@ -121,7 +114,7 @@ ol.renderer.Layer.prototype.renderIfReadyAndVisible = function() {
 
 
 /**
- * @param {ol.FrameState} frameState Frame state.
+ * @param {olx.FrameState} frameState Frame state.
  * @param {ol.source.Tile} tileSource Tile source.
  * @protected
  */
@@ -133,7 +126,7 @@ ol.renderer.Layer.prototype.scheduleExpireCache =
             /**
              * @param {ol.source.Tile} tileSource Tile source.
              * @param {ol.Map} map Map.
-             * @param {ol.FrameState} frameState Frame state.
+             * @param {olx.FrameState} frameState Frame state.
              */
             function(tileSource, map, frameState) {
               var tileSourceKey = goog.getUid(tileSource).toString();
@@ -162,14 +155,14 @@ ol.renderer.Layer.prototype.updateAttributions =
 
 
 /**
- * @param {ol.FrameState} frameState Frame state.
+ * @param {olx.FrameState} frameState Frame state.
  * @param {ol.source.Source} source Source.
  * @protected
  */
 ol.renderer.Layer.prototype.updateLogos = function(frameState, source) {
   var logo = source.getLogo();
   if (goog.isDef(logo)) {
-    frameState.logos[logo] = true;
+    frameState.logos[logo] = '';
   }
 };
 
@@ -203,13 +196,14 @@ ol.renderer.Layer.prototype.updateUsedTiles =
  * @param {function(ol.Tile): boolean} isLoadedFunction Function to
  *     determine if the tile is loaded.
  * @param {ol.source.Tile} tileSource Tile source.
+ * @param {number} pixelRatio Pixel ratio.
  * @param {ol.proj.Projection} projection Projection.
  * @protected
  * @return {function(number, number, number): ol.Tile} Returns a tile if it is
  *     loaded.
  */
 ol.renderer.Layer.prototype.createGetTileIfLoadedFunction =
-    function(isLoadedFunction, tileSource, projection) {
+    function(isLoadedFunction, tileSource, pixelRatio, projection) {
   return (
       /**
        * @param {number} z Z.
@@ -218,7 +212,7 @@ ol.renderer.Layer.prototype.createGetTileIfLoadedFunction =
        * @return {ol.Tile} Tile.
        */
       function(z, x, y) {
-        var tile = tileSource.getTile(z, x, y, projection);
+        var tile = tileSource.getTile(z, x, y, pixelRatio, projection);
         return isLoadedFunction(tile) ? tile : null;
       });
 };
@@ -247,21 +241,23 @@ ol.renderer.Layer.prototype.snapCenterToPixel =
  * - registers idle tiles in frameState.wantedTiles so that they are not
  *   discarded by the tile queue
  * - enqueues missing tiles
- * @param {ol.FrameState} frameState Frame state.
+ * @param {olx.FrameState} frameState Frame state.
  * @param {ol.source.Tile} tileSource Tile source.
  * @param {ol.tilegrid.TileGrid} tileGrid Tile grid.
+ * @param {number} pixelRatio Pixel ratio.
  * @param {ol.proj.Projection} projection Projection.
  * @param {ol.Extent} extent Extent.
  * @param {number} currentZ Current Z.
- * @param {number} preload Load low resolution tiles up to 'preload' levels.
+ * @param {number|undefined} preload Load low resolution tiles up to 'preload'
+ *     levels.
  * @param {function(this: T, ol.Tile)=} opt_tileCallback Tile callback.
- * @param {T=} opt_obj Object.
+ * @param {T=} opt_this Object to use as `this` in `opt_tileCallback`.
  * @protected
  * @template T
  */
 ol.renderer.Layer.prototype.manageTilePyramid = function(
-    frameState, tileSource, tileGrid, projection, extent, currentZ, preload,
-    opt_tileCallback, opt_obj) {
+    frameState, tileSource, tileGrid, pixelRatio, projection, extent,
+    currentZ, preload, opt_tileCallback, opt_this) {
   var tileSourceKey = goog.getUid(tileSource).toString();
   if (!(tileSourceKey in frameState.wantedTiles)) {
     frameState.wantedTiles[tileSourceKey] = {};
@@ -270,13 +266,16 @@ ol.renderer.Layer.prototype.manageTilePyramid = function(
   var tileQueue = frameState.tileQueue;
   var minZoom = tileGrid.getMinZoom();
   var tile, tileRange, tileResolution, x, y, z;
+  if (!goog.isDef(preload)) {
+    preload = 0;
+  }
   for (z = currentZ; z >= minZoom; --z) {
     tileRange = tileGrid.getTileRangeForExtentAndZ(extent, z);
     tileResolution = tileGrid.getResolution(z);
     for (x = tileRange.minX; x <= tileRange.maxX; ++x) {
       for (y = tileRange.minY; y <= tileRange.maxY; ++y) {
         if (currentZ - z <= preload) {
-          tile = tileSource.getTile(z, x, y, projection);
+          tile = tileSource.getTile(z, x, y, pixelRatio, projection);
           if (tile.getState() == ol.TileState.IDLE) {
             wantedTiles[tile.tileCoord.toString()] = true;
             if (!tileQueue.isKeyQueued(tile.getKey())) {
@@ -285,7 +284,7 @@ ol.renderer.Layer.prototype.manageTilePyramid = function(
             }
           }
           if (goog.isDef(opt_tileCallback)) {
-            opt_tileCallback.call(opt_obj, tile);
+            opt_tileCallback.call(opt_this, tile);
           }
         } else {
           tileSource.useTile(z, x, y);

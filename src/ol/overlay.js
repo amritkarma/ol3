@@ -25,8 +25,11 @@ ol.OverlayProperty = {
 
 
 /**
+ * Overlay position: `'bottom-left'`, `'bottom-center'`,  `'bottom-right'`,
+ * `'center-left'`, `'center-center'`, `'center-right'`, `'top-left'`,
+ * `'top-center'`, `'top-right'`
  * @enum {string}
- * @todo stability experimental
+ * @todo api
  */
 ol.OverlayPositioning = {
   BOTTOM_LEFT: 'bottom-left',
@@ -55,14 +58,8 @@ ol.OverlayPositioning = {
  *
  * @constructor
  * @extends {ol.Object}
- * @param {ol.OverlayOptions} options Overlay options.
- * @todo stability experimental
- * @todo observable element {Element} the Element containing the overlay
- * @todo observable map {ol.Map} the map that the overlay is part of
- * @todo observable position {ol.Coordinate} the spatial point that the overlay
- *       is anchored at
- * @todo observable positioning {ol.OverlayPositioning} how the overlay is
- *       positioned relative to its point on the map
+ * @param {olx.OverlayOptions} options Overlay options.
+ * @todo api stable
  */
 ol.Overlay = function(options) {
 
@@ -80,6 +77,18 @@ ol.Overlay = function(options) {
    * @type {boolean}
    */
   this.stopEvent_ = goog.isDef(options.stopEvent) ? options.stopEvent : true;
+
+  /**
+   * @private
+   * @type {number}
+   */
+  this.offsetX_ = goog.isDef(options.offsetX) ? options.offsetX : 0;
+
+  /**
+   * @private
+   * @type {number}
+   */
+  this.offsetY_ = goog.isDef(options.offsetY) ? options.offsetY : 0;
 
   /**
    * @private
@@ -134,7 +143,8 @@ ol.Overlay = function(options) {
     this.setPosition(options.position);
   }
   if (goog.isDef(options.positioning)) {
-    this.setPositioning(options.positioning);
+    this.setPositioning(
+        /** @type {ol.OverlayPositioning} */ (options.positioning));
   }
 
 };
@@ -143,8 +153,9 @@ goog.inherits(ol.Overlay, ol.Object);
 
 /**
  * Get the DOM element of this overlay.
- * @return {Element|undefined} Element.
- * @todo stability experimental
+ * @return {Element|undefined} The Element containing the overlay.
+ * @todo observable
+ * @todo api
  */
 ol.Overlay.prototype.getElement = function() {
   return /** @type {Element|undefined} */ (
@@ -158,8 +169,9 @@ goog.exportProperty(
 
 /**
  * Get the map associated with this overlay.
- * @return {ol.Map|undefined} Map.
- * @todo stability experimental
+ * @return {ol.Map|undefined} The map that the overlay is part of.
+ * @todo observable
+ * @todo api
  */
 ol.Overlay.prototype.getMap = function() {
   return /** @type {ol.Map|undefined} */ (
@@ -173,8 +185,10 @@ goog.exportProperty(
 
 /**
  * Get the current position of this overlay.
- * @return {ol.Coordinate|undefined} Position.
- * @todo stability experimental
+ * @return {ol.Coordinate|undefined} The spatial point that the overlay is
+ *     anchored at.
+ * @todo observable
+ * @todo api
  */
 ol.Overlay.prototype.getPosition = function() {
   return /** @type {ol.Coordinate|undefined} */ (
@@ -188,8 +202,10 @@ goog.exportProperty(
 
 /**
  * Get the current positioning of this overlay.
- * @return {ol.OverlayPositioning|undefined} Positioning.
- * @todo stability experimental
+ * @return {ol.OverlayPositioning|undefined} How the overlay is positioned
+ *     relative to its point on the map.
+ * @todo observable
+ * @todo api
  */
 ol.Overlay.prototype.getPositioning = function() {
   return /** @type {ol.OverlayPositioning|undefined} */ (
@@ -265,8 +281,9 @@ ol.Overlay.prototype.handlePositioningChanged = function() {
 
 /**
  * Set the DOM element to be associated with this overlay.
- * @param {Element|undefined} element Element.
- * @todo stability experimental
+ * @param {Element|undefined} element The Element containing the overlay.
+ * @todo observable
+ * @todo api
  */
 ol.Overlay.prototype.setElement = function(element) {
   this.set(ol.OverlayProperty.ELEMENT, element);
@@ -279,8 +296,9 @@ goog.exportProperty(
 
 /**
  * Set the map to be associated with this overlay.
- * @param {ol.Map|undefined} map Map.
- * @todo stability experimental
+ * @param {ol.Map|undefined} map The map that the overlay is part of.
+ * @todo observable
+ * @todo api
  */
 ol.Overlay.prototype.setMap = function(map) {
   this.set(ol.OverlayProperty.MAP, map);
@@ -293,8 +311,10 @@ goog.exportProperty(
 
 /**
  * Set the position for this overlay.
- * @param {ol.Coordinate|undefined} position Position.
- * @todo stability experimental
+ * @param {ol.Coordinate|undefined} position The spatial point that the overlay
+ *     is anchored at.
+ * @todo observable
+ * @todo api stable
  */
 ol.Overlay.prototype.setPosition = function(position) {
   this.set(ol.OverlayProperty.POSITION, position);
@@ -307,8 +327,10 @@ goog.exportProperty(
 
 /**
  * Set the positioning for this overlay.
- * @param {ol.OverlayPositioning|undefined} positioning Positioning.
- * @todo stability experimental
+ * @param {ol.OverlayPositioning|undefined} positioning how the overlay is
+ *     positioned relative to its point on the map.
+ * @todo observable
+ * @todo api
  */
 ol.Overlay.prototype.setPositioning = function(positioning) {
   this.set(ol.OverlayProperty.POSITIONING, positioning);
@@ -326,7 +348,7 @@ ol.Overlay.prototype.updatePixelPosition_ = function() {
 
   var map = this.getMap();
   var position = this.getPosition();
-  if (!goog.isDef(map) || !map.isDef() || !goog.isDef(position)) {
+  if (!goog.isDef(map) || !map.isRendered() || !goog.isDef(position)) {
     if (this.rendered_.visible) {
       goog.style.setElementShown(this.element_, false);
       this.rendered_.visible = false;
@@ -335,6 +357,7 @@ ol.Overlay.prototype.updatePixelPosition_ = function() {
   }
 
   var pixel = map.getPixelFromCoordinate(position);
+  goog.asserts.assert(!goog.isNull(pixel));
   var mapSize = map.getSize();
   goog.asserts.assert(goog.isDef(mapSize));
   var style = this.element_.style;
@@ -353,11 +376,11 @@ ol.Overlay.prototype.updatePixelPosition_ = function() {
     if (this.rendered_.right_ !== '') {
       this.rendered_.right_ = style.right = '';
     }
-    var offsetX = 0;
+    var offsetX = -this.offsetX_;
     if (positioning == ol.OverlayPositioning.BOTTOM_CENTER ||
         positioning == ol.OverlayPositioning.CENTER_CENTER ||
         positioning == ol.OverlayPositioning.TOP_CENTER) {
-      offsetX = goog.style.getSize(this.element_).width / 2;
+      offsetX += goog.style.getSize(this.element_).width / 2;
     }
     var left = Math.round(pixel[0] - offsetX) + 'px';
     if (this.rendered_.left_ != left) {
@@ -378,11 +401,11 @@ ol.Overlay.prototype.updatePixelPosition_ = function() {
     if (this.rendered_.bottom_ !== '') {
       this.rendered_.bottom_ = style.bottom = '';
     }
-    var offsetY = 0;
+    var offsetY = -this.offsetY_;
     if (positioning == ol.OverlayPositioning.CENTER_LEFT ||
         positioning == ol.OverlayPositioning.CENTER_CENTER ||
         positioning == ol.OverlayPositioning.CENTER_RIGHT) {
-      offsetY = goog.style.getSize(this.element_).height / 2;
+      offsetY += goog.style.getSize(this.element_).height / 2;
     }
     var top = Math.round(pixel[1] - offsetY) + 'px';
     if (this.rendered_.top_ != top) {

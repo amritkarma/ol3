@@ -15,8 +15,8 @@ goog.require('ol.Object');
  * @constructor
  * @extends {ol.Object}
  * @implements {oli.control.Control}
- * @param {ol.control.ControlOptions} options Control options.
- * @todo stability experimental
+ * @param {olx.control.ControlOptions} options Control options.
+ * @todo api stable
  */
 ol.control.Control = function(options) {
 
@@ -30,9 +30,10 @@ ol.control.Control = function(options) {
 
   /**
    * @private
-   * @type {Element|undefined}
+   * @type {Element}
    */
-  this.target_ = options.target;
+  this.target_ = goog.isDef(options.target) ?
+      goog.dom.getElement(options.target) : null;
 
   /**
    * @private
@@ -62,7 +63,7 @@ ol.control.Control.prototype.disposeInternal = function() {
 /**
  * Get the map associated with this control.
  * @return {ol.Map} Map.
- * @todo stability experimental
+ * @todo api
  */
 ol.control.Control.prototype.getMap = function() {
   return this.map_;
@@ -83,7 +84,7 @@ ol.control.Control.prototype.handleMapPostrender = goog.nullFunction;
  * Subclasses may set up event handlers to get notified about changes to
  * the map here.
  * @param {ol.Map} map Map.
- * @todo stability experimental
+ * @todo api stable
  */
 ol.control.Control.prototype.setMap = function(map) {
   if (!goog.isNull(this.map_)) {
@@ -95,12 +96,13 @@ ol.control.Control.prototype.setMap = function(map) {
   }
   this.map_ = map;
   if (!goog.isNull(this.map_)) {
-    var target = goog.isDef(this.target_) ?
+    var target = !goog.isNull(this.target_) ?
         this.target_ : map.getOverlayContainerStopEvent();
     goog.dom.appendChild(target, this.element);
     if (this.handleMapPostrender !== goog.nullFunction) {
       this.listenerKeys.push(goog.events.listen(map,
           ol.MapEventType.POSTRENDER, this.handleMapPostrender, false, this));
     }
+    map.render();
   }
 };

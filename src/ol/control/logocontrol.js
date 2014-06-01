@@ -4,7 +4,6 @@ goog.require('goog.dom');
 goog.require('goog.dom.TagName');
 goog.require('goog.object');
 goog.require('goog.style');
-goog.require('ol.FrameState');
 goog.require('ol.control.Control');
 goog.require('ol.css');
 
@@ -17,8 +16,8 @@ goog.require('ol.css');
  * be styled by using a css selector for `.ol-logo`.
  * @constructor
  * @extends {ol.control.Control}
- * @param {ol.control.LogoOptions=} opt_options Logo options.
- * @todo stability experimental
+ * @param {olx.control.LogoOptions=} opt_options Logo options.
+ * @todo api
  */
 ol.control.Logo = function(opt_options) {
 
@@ -66,7 +65,7 @@ ol.control.Logo.prototype.handleMapPostrender = function(mapEvent) {
 
 
 /**
- * @param {?ol.FrameState} frameState Frame state.
+ * @param {?olx.FrameState} frameState Frame state.
  * @private
  */
 ol.control.Logo.prototype.updateElement_ = function(frameState) {
@@ -90,15 +89,25 @@ ol.control.Logo.prototype.updateElement_ = function(frameState) {
     }
   }
 
-  var image, logoElement;
-  for (logo in logos) {
-    if (!(logo in logoElements)) {
+  var image, logoElement, logoKey;
+  for (logoKey in logos) {
+    if (!(logoKey in logoElements)) {
       image = new Image();
-      image.src = logo;
-      logoElement = goog.dom.createElement(goog.dom.TagName.LI);
-      logoElement.appendChild(image);
+      image.src = logoKey;
+      var logoValue = logos[logoKey];
+      var child;
+      if (logoValue === '') {
+        child = image;
+      } else {
+        child = goog.dom.createDom(goog.dom.TagName.A, {
+          'href': logoValue,
+          'target': '_blank'
+        });
+        child.appendChild(image);
+      }
+      logoElement = goog.dom.createDom(goog.dom.TagName.LI, undefined, child);
       goog.dom.appendChild(this.ulElement_, logoElement);
-      logoElements[logo] = logoElement;
+      logoElements[logoKey] = logoElement;
     }
   }
 
